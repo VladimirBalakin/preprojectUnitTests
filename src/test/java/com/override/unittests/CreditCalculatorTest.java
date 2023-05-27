@@ -8,12 +8,9 @@ import com.override.unittests.service.CreditCalculator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
@@ -72,7 +69,7 @@ class CreditCalculatorTest {
         double result = creditCalculator.calculateOverpayment(amount, monthPaymentAmount, ClientType.INDIVIDUAL);
         double fractionOfResult = result % 1d;
         boolean isResultRoundedByCents = (fractionOfResult * 100 % 1) == 0;
-        Assertions.assertEquals(false, isResultRoundedByCents);
+        Assertions.assertFalse(isResultRoundedByCents);
     }
 
     @Test
