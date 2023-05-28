@@ -8,12 +8,18 @@ import com.override.unittests.service.CreditCalculator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CreditCalculatorTest {
@@ -24,7 +30,6 @@ class CreditCalculatorTest {
     @Mock
     private CentralBankService centralBankService;
 
-    //многие из тестов ниже могут быть заменены на @ParameterizedTest  https://habr.com/ru/post/591007/
     @Test
     public void calculateOverpaymentGovermentTest() {
         when(centralBankService.getKeyRate()).thenReturn(10d);
@@ -74,16 +79,31 @@ class CreditCalculatorTest {
 
     @Test
     public void throwExceptionWhenNoConnectionTest() {
-        when(centralBankService.getKeyRate()).thenThrow(CentralBankNotRespondingException.class);
-        assertThrows(CentralBankNotRespondingException.class, () -> centralBankService.getKeyRate());
+        doThrow(CentralBankNotRespondingException.class).when(centralBankService).getKeyRate();
+        when(centralBankService.getDefaultCreditRate()).thenReturn(30d);
+        double amount = 10000d;
+        double monthPaymentAmount = 1000;
+        double result = creditCalculator.calculateOverpayment(amount, monthPaymentAmount, ClientType.INDIVIDUAL);
+        verify(centralBankService).getDefaultCreditRate();
+        assertEquals(3300.0, result);
     }
 
-    @Test
-    public void calculateOverpaymentWhenNoConnectionTest() {
-        when(centralBankService.getKeyRate()).thenReturn(30d);
+
+    @ParameterizedTest
+    @MethodSource("methodDataProviderForCalculateOverpayment")
+    public void calculateOverpaymentParameterizedTest(ClientType clientType, double expected) {
+        when(centralBankService.getKeyRate()).thenReturn(10d);
         double amount = 100000d;
         double monthPaymentAmount = 10000d;
-        double result = creditCalculator.calculateOverpayment(amount, monthPaymentAmount, ClientType.INDIVIDUAL);
-        Assertions.assertEquals(35840d, result);
+        Assertions.assertEquals(expected,
+                creditCalculator.calculateOverpayment(amount, monthPaymentAmount, clientType));
+    }
+
+    static Stream<Arguments> methodDataProviderForCalculateOverpayment() {
+        return Stream.of(
+                Arguments.arguments(ClientType.GOVERMENT, 10000d),
+                Arguments.arguments(ClientType.INDIVIDUAL, 12000d),
+                Arguments.arguments(ClientType.BUSINESS, 11000d)
+        );
     }
 }
